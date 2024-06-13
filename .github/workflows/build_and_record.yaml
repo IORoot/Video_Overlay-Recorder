@@ -25,7 +25,7 @@ on:
 jobs:
 
 
-  install-overlay:
+  record-overlay:
     runs-on: ubuntu-latest
 
 
@@ -142,7 +142,7 @@ jobs:
       if: ${{ github.event.inputs.gdrive_folder }}
       run: | 
           echo "${{ secrets.RCLONE_CONF_B64 }}" | base64 --decode > rclone.conf
-          rclone copy ./overlay_video.mov GDrive:${{ github.event.inputs.gdrive_folder }}/overlay/overlay_video.mov --config rclone.conf 
+          rclone copy ./overlay_video.mov GDrive:${{ github.event.inputs.gdrive_folder }}/overlay --config rclone.conf 
 
 
 
