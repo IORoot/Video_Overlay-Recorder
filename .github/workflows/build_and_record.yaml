@@ -8,7 +8,19 @@ name: 🎞️ Create overlay and record
 
 on: 
   workflow_dispatch:
-
+    inputs:
+      template:
+        description: 'Name of the overlay template to use'
+        required: true
+      inputs_b64:
+        description: 'Optional inputs.json'
+      timecut_settings:
+        description: 'Optional settings for timecut'
+        default: '--viewport="1080,1920" --fps=30 --start=3 --duration=10'
+      gdrive_folder:
+        description: 'where to put the download in google drive'  
+      return_webhook:
+        description: 'Make.com webhook to trigger on finish'
 
 jobs:
 
@@ -47,6 +59,16 @@ jobs:
 
 
     # ╭───────────────────────────────────────────────────────╮
+    # │                  Install rClone + MPV                 │
+    # ╰───────────────────────────────────────────────────────╯
+    - name: Install rClone
+      run: |
+        sudo apt update
+        sudo apt install rclone
+
+
+
+    # ╭───────────────────────────────────────────────────────╮
     # │                    Install FFMPEG                     │
     # ╰───────────────────────────────────────────────────────╯
     - uses: FedericoCarboni/setup-ffmpeg@v2
@@ -64,17 +86,26 @@ jobs:
     # ╰───────────────────────────────────────────────────────╯
     - name: Setup Overlay
       run: | 
-        unzip ${GITHUB_WORKSPACE}/overlays/002-fluid/002-fluid.zip -d ${GITHUB_WORKSPACE}/overlays/bounce/
-        cp ${GITHUB_WORKSPACE}/inputs.json ${GITHUB_WORKSPACE}/overlays/bounce/inputs.json
-        
+        unzip ${GITHUB_WORKSPACE}/overlays/${{ github.event.inputs.template }}/template.zip -d ${GITHUB_WORKSPACE}/overlays/${{ github.event.inputs.template }}/
 
-      
+
+    # ╭───────────────────────────────────────────────────────╮
+    # │             Optional setup of inputs.json             │
+    # ╰───────────────────────────────────────────────────────╯
+    - name: Setup Inputs.json
+      if: ${{ github.event.inputs.inputs_b64 }}
+      continue-on-error: true
+      run: |     
+        echo ${{ github.event.inputs.inputs_b64 }} > inputs.b64
+        cat inputs.b64 | base64 -d > ${GITHUB_WORKSPACE}/overlays/${{ github.event.inputs.template }}/inputs.json
+         
+        
       
     # ╭───────────────────────────────────────────────────────╮
     # │                   Start PHP Server                    │
     # ╰───────────────────────────────────────────────────────╯
     - name: Start PHP server
-      run: php -S 0.0.0.0:8080 -t ./overlays/bounce/ &
+      run: php -S 0.0.0.0:8080 -t ./overlays/${{ github.event.inputs.template }}/ &
   
 
 
@@ -98,8 +129,7 @@ jobs:
     - name: Capture Video
       continue-on-error: true
       run: |
-        node ${GITHUB_WORKSPACE}/node_modules/timecut/cli.js "http://localhost:8080"  --transparent-background --viewport="1080,1920" --fps=30 --start=3 --duration=10 --output-options="-c:v png" --pix-fmt=rgba --output=overlay_video.mov --launch-arguments="--no-sandbox --disable-setuid-sandbox --allow-file-access-from-files"
-
+        node ${GITHUB_WORKSPACE}/node_modules/timecut/cli.js "http://localhost:8080" ${{ github.event.inputs.timecut_settings }} --output-options="-c:v png" --pix-fmt=rgba --output=overlay_video.mov --launch-arguments="--no-sandbox --disable-setuid-sandbox --allow-file-access-from-files"
 
 
 
@@ -108,26 +138,25 @@ jobs:
     # │                               GOOGLE DRIVE                               │░
     # │                                                                          │░
     # ╰░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-    
-
-
     - name: rclone copy result back to google drive
+      if: ${{ github.event.inputs.gdrive_folder }}
       run: | 
           echo "${{ secrets.RCLONE_CONF_B64 }}" | base64 --decode > rclone.conf
-          
-          mkdir videos
-          
-          for file in *.mp4; do
-            mv -- "$file" videos
-          done
-
-          rclone copy ./videos/ GDrive:${{ github.event.inputs.gdrive_folder }}/ --config rclone.conf 
+          rclone copy ./overlay_video.mov GDrive:${{ github.event.inputs.gdrive_folder }}/overlay/overlay_video.mov --config rclone.conf 
 
 
 
+    # ╭───────────────────────────────────────────────────────╮
+    # │      Once the results are complete, send webhook      │
+    # ╰───────────────────────────────────────────────────────╯
+    # Use -H "Content-Type: application/json"  for JSON
+    # --data-binary is used to stop \n newlines from being added to base64 string.
+    - name: Trigger Return Webhook
+      if: ${{ github.event.inputs.return_webhook }}
+      run: |
+        curl -X POST  -H "Content-Type: text/plain" --data-binary "" ${{ github.event.inputs.return_webhook }}
 
 
-          
     # ╭───────────────────────────────────────────────────────╮
     # │                  Save Localhost CURL                  │
     # ╰───────────────────────────────────────────────────────╯
