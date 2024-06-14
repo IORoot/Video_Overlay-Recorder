@@ -1,12 +1,12 @@
 {
     "Title":{
-        "innerText": "LondonParkour",
+        "innerText": "Testing",
         "style": {
-            "color": "rgb(92,201,187)",
+            "color": "rgb(39,210,19)",
             "font-size": "40px"
         }
     },
     "Content": {
-        "innerText": "With an intelligent and challenge-based way of looking at movement and being healthy."
+        "innerText": "Some fun text could go here."
     }
 }
