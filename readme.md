@@ -1,3 +1,5 @@
+![header](https://raw.githubusercontent.com/IORoot/Video_Overlay-Recorder/refs/heads/master/header.png)
+
 # Overlay Recorder
 
 Records a webpage to transparent PNG files which create a MOV Movie with alpha transparency in it.
