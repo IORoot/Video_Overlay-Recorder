@@ -1,4 +1,4 @@
-![header](https://raw.githubusercontent.com/IORoot/Video_Overlay-Recorder/refs/heads/master/header.png)
+![header](https://raw.githubusercontent.com/IORoot/Video_Overlay-Recorder/refs/heads/master/header.jpg)
 
 # Overlay Recorder
 
